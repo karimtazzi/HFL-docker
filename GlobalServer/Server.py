@@ -41,7 +41,7 @@ def load_all_weights(server_path: str) -> List[Tuple[NDArrays, int]]:
             # Load the weights from the file
             with open(file_path, 'rb') as h:
                 weights = pickle.load(h)
-                weights_list.append((parameters_to_ndarrays(weights[0]), 500))  # Add weights to the list
+                weights_list.append((parameters_to_ndarrays(weights[0]), weights[1]))  # Add weights to the list
             
             # Delete the file after loading
             os.remove(file_path)
@@ -57,6 +57,9 @@ def Aggregation(weights_results: List[Tuple[NDArrays, int]]):
     aggregated_ndarrays = aggregate(weights_results)
     parameters_aggregated = ndarrays_to_parameters(aggregated_ndarrays)
     return parameters_aggregated
+metrics_aggregated = {}
+fit_metrics = [(weights[2], weights[1]) for _, res in results]
+metrics_aggregated = fit_metrics_aggregation_fn(fit_metrics)
 
 # Perform the aggregation
 aggregated_weights = Aggregation(weights_results)
