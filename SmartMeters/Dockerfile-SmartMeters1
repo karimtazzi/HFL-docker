@@ -1,14 +1,18 @@
-# Dockerfile-SmartMeters
-FROM python:3.12.6
+# Use a smaller base image
+FROM python:3.12-slim
 
 # Set up working directory
 WORKDIR /app
 
-# Copy client files
+# Copy global server files
+
+# Copy global server files
 COPY . /app
 
 # Install required packages
-RUN pip install -r requirements.txt
+RUN pip install --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt && \
+    rm -rf /root/.cache/pip  # Clean up pip cache to save space
 
 # Set the entrypoint
 ENTRYPOINT ["python", "Client.py","1","5003"]

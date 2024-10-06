@@ -22,7 +22,6 @@ base_name="Hierarchical_FL/Base_station_"+str(sys.argv[1])
 BASE_STATION_PATH = os.environ.get("BASE_STATION_PATH", base_name)
 CLIENT_ID = int(os.environ.get("CLIENT_ID", 3))
 
-print(BASE_STATION_PATH)
 def create_cnn_model(X_train_shape=70, n_classes=2):
     kernel_size = 3
     filters1 = 64

@@ -12,6 +12,47 @@ Server_path = os.environ.get("Server_path")
 BS_ID = int(os.environ.get("BS_ID", 3))
 gserver_path = os.environ.get("Gserver_path")
 
+from typing import Dict, List, Tuple
+from flwr.common import Scalar
+
+def fit_metrics_aggregation_fn(
+    fit_metrics: List[Tuple[int, Dict[str, Scalar]]]
+) -> Dict[str, Scalar]:
+    """Aggregate fit metrics using weighted averages based on client data.
+
+    Parameters
+    ----------
+    fit_metrics : List[Tuple[int, Dict[str, Scalar]]]
+        A list where each element is a tuple containing the number of examples
+        used for training on a client and a dictionary with the client’s metrics.
+
+    Returns
+    -------
+    Dict[str, Scalar]
+        Aggregated metrics (e.g., weighted average accuracy, loss).
+    """
+    # Initialize variables for weighted sum of metrics
+    total_examples = 0
+    weighted_loss_sum = 0.0
+    weighted_accuracy_sum = 0.0
+
+    # Iterate over client metrics and accumulate weighted sums
+    for num_examples, metrics in fit_metrics:
+        total_examples += num_examples
+        weighted_loss_sum += metrics["loss"] * num_examples
+        weighted_accuracy_sum += metrics["accuracy"] * num_examples
+
+    # Compute weighted averages
+    avg_loss = weighted_loss_sum / total_examples if total_examples > 0 else 0.0
+    avg_accuracy = weighted_accuracy_sum / total_examples if total_examples > 0 else 0.0
+
+    # Return the aggregated metrics
+    return {
+        "loss": avg_loss,
+        "accuracy": avg_accuracy,
+    }
+
+
 class SaveModelStrategy(fl.server.strategy.FedAvg):
     def aggregate_fit(
         self,
@@ -48,6 +89,7 @@ class SaveModelStrategy(fl.server.strategy.FedAvg):
         # Append aggregated metrics to the list
         weights_metrices.append(metrics_aggregated)
 
+        print("METRICESSSSS weights and metrics: ", weights_metrices[2])
 
         # Call the base class method to perform the aggregation
         aggregated_result = super().aggregate_fit(rnd, results, failures)

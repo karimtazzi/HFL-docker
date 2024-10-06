@@ -7,6 +7,46 @@ from typing import List, Tuple
 
 from flwr.common import parameters_to_ndarrays, ndarrays_to_parameters, NDArrays
 
+from typing import Dict, List, Tuple
+from flwr.common import Scalar
+
+def fit_metrics_aggregation_fn(
+    fit_metrics: List[Tuple[int, Dict[str, Scalar]]]
+) -> Dict[str, Scalar]:
+    """Aggregate fit metrics using weighted averages based on client data.
+
+    Parameters
+    ----------
+    fit_metrics : List[Tuple[int, Dict[str, Scalar]]]
+        A list where each element is a tuple containing the number of examples
+        used for training on a client and a dictionary with the client’s metrics.
+
+    Returns
+    -------
+    Dict[str, Scalar]
+        Aggregated metrics (e.g., weighted average accuracy, loss).
+    """
+    # Initialize variables for weighted sum of metrics
+    total_examples = 0
+    weighted_loss_sum = 0.0
+    weighted_accuracy_sum = 0.0
+
+    # Iterate over client metrics and accumulate weighted sums
+    for num_examples, metrics in fit_metrics:
+        total_examples += num_examples
+        weighted_loss_sum += metrics["loss"] * num_examples
+        weighted_accuracy_sum += metrics["accuracy"] * num_examples
+
+    # Compute weighted averages
+    avg_loss = weighted_loss_sum / total_examples if total_examples > 0 else 0.0
+    avg_accuracy = weighted_accuracy_sum / total_examples if total_examples > 0 else 0.0
+
+    # Return the aggregated metrics
+    return {
+        "loss": avg_loss,
+        "accuracy": avg_accuracy,
+    }
+
 # Fetch paths from environment variables
 Server_path = os.environ.get("Server_path")
 S_weights_path = os.environ.get("Gserver_path")
@@ -58,8 +98,8 @@ def Aggregation(weights_results: List[Tuple[NDArrays, int]]):
     parameters_aggregated = ndarrays_to_parameters(aggregated_ndarrays)
     return parameters_aggregated
 metrics_aggregated = {}
-fit_metrics = [(weights[2], weights[1]) for _, res in results]
-metrics_aggregated = fit_metrics_aggregation_fn(fit_metrics)
+fit_metrics = [(weights[2], weights[1]) for weights in weights_results]
+#metrics_aggregated = fit_metrics_aggregation_fn(fit_metrics)
 
 # Perform the aggregation
 aggregated_weights = Aggregation(weights_results)
