@@ -1,0 +1,141 @@
+version: '3'
+services:
+  global_server:
+    build:
+      context: ./GlobalServer
+      dockerfile: Dockerfile-globalServer
+    container_name: global_server
+    environment:
+      - FL_SERVER_ADDRESS=global_server:5004  # Use service name for communication 
+      - Gserver_path=/data/gServer 
+      - Server_path=/data/server
+    volumes:
+      - /workspace/HFL/Hierarchical_FL/Base_station_1:/data/Base_station_1
+      - /workspace/HFL/Hierarchical_FL/Base_station_2:/data/Base_station_2 
+      - /workspace/HFL/Hierarchical_FL/Server:/data/server
+      - /workspace/HFL/Hierarchical_FL/gServer:/data/gServer
+    networks:
+      - federated
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5004"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  intermediate_server1:
+    build:
+      context: ./DataConcentrator
+      dockerfile: Dockerfile-dataConcentrator1
+    container_name: intermediate_server1
+    ports:
+      - "5003"  # Expose the intermediate server on port 5003
+    environment:
+      - BS_ID=1
+      - BASE_STATION_PATH=/data/Base_station_1
+      - Server_path=/data/server
+      - Gserver_path=/data/gServer 
+      - FL_SERVER_ADDRESS=intermediate_server1:5003  # Use service name for communication
+    volumes:
+      - /workspace/HFL/Hierarchical_FL/Base_station_1:/data/Base_station_1  # Mount host directory to container
+      - /workspace/HFL/Hierarchical_FL/Server:/data/server
+      - /workspace/HFL/Hierarchical_FL/gServer:/data/gServer
+    networks:
+      - federated
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5003"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  intermediate_server2:
+    build:
+      context: ./DataConcentrator
+      dockerfile: Dockerfile-dataConcentrator2
+    container_name: intermediate_server2
+    ports:
+      - "5004"  # Expose the intermediate server on port 5004
+    environment:
+      - BS_ID=2
+      - BASE_STATION_PATH=/data/Base_station_2
+      - Server_path=/data/server
+      - Gserver_path=/data/gServer 
+      - FL_SERVER_ADDRESS=intermediate_server2:5004  # Use service name for communication
+    volumes:
+      - /workspace/HFL/Hierarchical_FL/Base_station_2:/data/Base_station_2  # Mount host directory to container
+      - /workspace/HFL/Hierarchical_FL/Server:/data/server
+      - /workspace/HFL/Hierarchical_FL/gServer:/data/gServer
+    networks:
+      - federated
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5004"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  client1:
+    build:
+      context: ./SmartMeters
+      dockerfile: Dockerfile-SmartMeters1
+    container_name: client1
+    environment:
+      - CLIENT_ID=1
+      - BASE_STATION_PATH=/data/Base_station_1  # Path inside the container
+      - FL_SERVER_ADDRESS=intermediate_server1:5003  # Use intermediate_server1 for communication
+    networks:
+      - federated
+    volumes:
+      - /workspace/HFL/Hierarchical_FL/Base_station_1:/data/Base_station_1  # Mount host directory to container
+    depends_on:
+      - intermediate_server1
+
+  client2:
+    build:
+      context: ./SmartMeters
+      dockerfile: Dockerfile-SmartMeters1
+    container_name: client2
+    environment:
+      - CLIENT_ID=2
+      - BASE_STATION_PATH=/data/Base_station_1  # Changed to avoid conflict
+      - FL_SERVER_ADDRESS=intermediate_server1:5003  # Use intermediate_server1 for communication
+    networks:
+      - federated
+    volumes:
+      - /workspace/HFL/Hierarchical_FL/Base_station_1:/data/Base_station_1  # Changed to avoid conflict
+    depends_on:
+      - intermediate_server1
+
+  client3:
+    build:
+      context: ./SmartMeters
+      dockerfile: Dockerfile-SmartMeters2
+    container_name: client3
+    environment:
+      - CLIENT_ID=3  # Changed to avoid conflict
+      - BASE_STATION_PATH=/data/Base_station_2  # Path inside the container
+      - FL_SERVER_ADDRESS=intermediate_server2:5004  # Use intermediate_server2 for communication
+    networks:
+      - federated
+    volumes:
+      - /workspace/HFL/Hierarchical_FL/Base_station_2:/data/Base_station_2  # Mount host directory to container
+    depends_on:
+      - intermediate_server2
+
+  client4:
+    build:
+      context: ./SmartMeters
+      dockerfile: Dockerfile-SmartMeters2
+    container_name: client4
+    environment:
+      - CLIENT_ID=5 # Changed to avoid conflict
+      - BASE_STATION_PATH=/data/Base_station_2  # Changed to avoid conflict
+      - FL_SERVER_ADDRESS=intermediate_server2:5004  # Use intermediate_server2 for communication
+    networks:
+      - federated
+    volumes:
+      - /workspace/HFL/Hierarchical_FL/Base_station_2:/data/Base_station_2  # Changed to avoid conflict
+    depends_on:
+      - intermediate_server2
+
+networks:
+  federated:
+    driver: bridge
