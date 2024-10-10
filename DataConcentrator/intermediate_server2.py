@@ -6,14 +6,15 @@ import pickle
 from flwr.common import parameters_to_ndarrays, ndarrays_to_parameters
 from flwr.server.strategy.aggregate import aggregate
 from logging import log, WARNING
+from typing import Dict, List, Tuple
+from flwr.common import Scalar
+
 
 # Retrieve environment variables
 Server_path = os.environ.get("Server_path")
 BS_ID = int(os.environ.get("BS_ID", 3))
 gserver_path = os.environ.get("Gserver_path")
 
-from typing import Dict, List, Tuple
-from flwr.common import Scalar
 
 def fit_metrics_aggregation_fn(
     fit_metrics: List[Tuple[int, Dict[str, Scalar]]]
@@ -72,29 +73,14 @@ class SaveModelStrategy(fl.server.strategy.FedAvg):
         parameters_aggregated = ndarrays_to_parameters(aggregated_ndarrays)
         
         # Save aggregated weights in metrics list
-        weights_metrices.append(parameters_aggregated )
+        weights_metrices.append(aggregated_ndarrays)
 
         # Example usage correction (fixed variable `some`, which was undefined)
         total_examples = sum(fit_res.num_examples for _, fit_res in results)
         weights_metrices.append(total_examples)
-
-        # Aggregate custom metrics if aggregation function was provided
-        metrics_aggregated = {}
-        if self.fit_metrics_aggregation_fn:
-            fit_metrics = [(res.num_examples, res.metrics) for _, res in results]
-            metrics_aggregated = self.fit_metrics_aggregation_fn(fit_metrics)
-        elif rnd == 1:  # Log this warning only in the first round
-            log(WARNING, "No fit_metrics_aggregation_fn provided")
-        
-        # Append aggregated metrics to the list
-        weights_metrices.append(metrics_aggregated)
-
-        print("METRICESSSSS weights and metrics: ", weights_metrices[2])
-
+        weights_metrices.append(rnd)
         # Call the base class method to perform the aggregation
-        aggregated_result = super().aggregate_fit(rnd, results, failures)
-        aggregated_weights, aggregated_metrics = aggregated_result
-
+        #aggregated_result = super().aggregate_fit(rnd, results, failures)
         # Save the aggregated weights locally to the server path
         S_weights_path = os.path.join(Server_path)
         if not os.path.exists(S_weights_path):
@@ -104,15 +90,19 @@ class SaveModelStrategy(fl.server.strategy.FedAvg):
             pickle.dump(weights_metrices, h)
 
         # Load global weights after the first round
-        if rnd > 1:
+        if rnd >= 1:
             global_weights_path = os.path.join(gserver_path, "Global_weights.obj")
             with open(global_weights_path, 'rb') as h:
-                aggregated_weights = pickle.load(h)
+                aggregated_result = pickle.load(h), {}
+        else:
+            aggregated_result = super().aggregate_fit(rnd, results, failures)
+
+        aggregated_weights, aggregated_metrics = aggregated_result
+
 
         return aggregated_weights, aggregated_metrics
 
-
-# Create strategy and run server
+# Create strategy and run the Flower server
 strategy = SaveModelStrategy()
 
 # Start Flower server for three rounds of federated learning

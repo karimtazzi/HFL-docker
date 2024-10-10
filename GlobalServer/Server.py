@@ -10,6 +10,43 @@ from flwr.common import parameters_to_ndarrays, ndarrays_to_parameters, NDArrays
 from typing import Dict, List, Tuple
 from flwr.common import Scalar
 
+
+
+def create_cnn_model(X_train_shape=70, n_classes=2):
+    kernel_size = 3
+    filters1 = 64
+    filters2 = 128
+    pool_size = 2
+
+    cnn_model = Sequential([
+        Input((X_train_shape, 1)),
+
+        Conv1D(filters1, kernel_size, padding='same', activation='relu', strides=1),
+        Conv1D(filters1, kernel_size, padding='same', activation='relu', strides=1),
+        MaxPooling1D(pool_size=pool_size),
+        Dropout(0.5),
+
+        Conv1D(filters2, kernel_size, padding='same', activation='relu', strides=1),
+        Conv1D(filters2, kernel_size, padding='same', activation='relu', strides=1),
+        MaxPooling1D(pool_size=pool_size),
+
+        Bidirectional(LSTM(32)),
+
+        Dense(256, activation='relu'),
+        Dropout(0.5),
+
+        Dense(256, activation='relu'),
+        Dropout(0.5),
+
+        Dense(n_classes, activation='softmax')
+    ])
+
+    cnn_model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+
+    return cnn_model
+
+
+
 def fit_metrics_aggregation_fn(
     fit_metrics: List[Tuple[int, Dict[str, Scalar]]]
 ) -> Dict[str, Scalar]:
@@ -69,45 +106,56 @@ def aggregate(results: List[Tuple[NDArrays, int]]) -> NDArrays:
     return weights_prime
 
 def load_all_weights(server_path: str) -> List[Tuple[NDArrays, int]]:
-    """Load all weights from the specified directory."""
+    """Load all weights from the specified directory and delete files after reading."""
     weights_list = []  # List to store weights
     
     # Iterate over all files in the directory
     for filename in os.listdir(server_path):
         file_path = os.path.join(server_path, filename)
         
-        # Ensure the file is a weights file (could add specific filtering if needed)
-        if os.path.isfile(file_path) and filename.endswith(".obj"):  # Assuming weights files end with .obj
-            # Load the weights from the file
-            with open(file_path, 'rb') as h:
-                weights = pickle.load(h)
-                weights_list.append((parameters_to_ndarrays(weights[0]), weights[1]))  # Add weights to the list
+        # Ensure the file is a weights file (assuming weights files end with .obj)
+        if os.path.isfile(file_path) and filename.endswith(".obj"):
+            try:
+                # Load the weights from the file
+                with open(file_path, 'rb') as h:
+                    weights = pickle.load(h)
+                    weights_list.append([weights[0], weights[1], weights[2]])  # Add weights to the list
+                
+                # Delete the file after loading
+                os.remove(file_path)
+                print(f"Deleted weights file: {filename}")
             
-            # Delete the file after loading
-            os.remove(file_path)
-            print(f"Deleted weights file: {filename}")
+            except (OSError, IOError) as e:
+                print(f"Error loading or deleting file {filename}: {e}")
     
     return weights_list
+from flask import Flask, request, jsonify
 
+app = Flask(__name__)
+def receive_data():
+    data = request.get_json()  # Get the JSON data sent from Container A
+    print(f"Received data: {data["rnd"]}")
+    return data["rnd"]
+print("yesssssssssssssssssssss")
+print(receive_data())
 # Load the weights results
-weights_results = load_all_weights(Server_path)
 
+weights_results = load_all_weights(Server_path)
 def Aggregation(weights_results: List[Tuple[NDArrays, int]]):
     """Aggregate the weights results."""
     aggregated_ndarrays = aggregate(weights_results)
     parameters_aggregated = ndarrays_to_parameters(aggregated_ndarrays)
     return parameters_aggregated
-metrics_aggregated = {}
-fit_metrics = [(weights[2], weights[1]) for weights in weights_results]
-#metrics_aggregated = fit_metrics_aggregation_fn(fit_metrics)
 
+weights_res=[(weights[0], weights[1]) for weights in weights_results]
+rnd=weights_results[0][2]
 # Perform the aggregation
-aggregated_weights = Aggregation(weights_results)
-
+aggregated_weights = Aggregation(weights_res)
+res=[aggregated_weights, {}]
 if not os.path.exists(S_weights_path):
     os.makedirs(S_weights_path)
 # Save the aggregated weights
-with open(os.path.join(S_weights_path, "Global_weights.obj"), 'wb') as h:
-    pickle.dump(aggregated_weights, h)
+with open(os.path.join(S_weights_path, "Global_weights_"+str(rnd)+".obj"), 'wb') as h:
+    pickle.dump(res, h)
 
-print(f"Aggregated weights saved to {os.path.join(S_weights_path, 'Global_weights.obj')}")
+print(f"Aggregated weights saved to {os.path.join(S_weights_path,  "Global_weights_"+str(rnd)+".obj")}")

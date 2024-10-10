@@ -16,6 +16,7 @@ from tensorflow.keras.layers import (
     LSTM
 )
 import flwr as fl
+from flwr.client import start_client
 
 base_name="Hierarchical_FL/Base_station_"+str(sys.argv[1])
 # Retrieve environment variables
@@ -74,22 +75,22 @@ class Client(fl.client.NumPyClient):
 
     def fit(self, parameters, config):
         model.set_weights(parameters)
-        r = model.fit(X_train, y_train, epochs=1, validation_data=(X_test, y_test), verbose=0)
+        r=model.fit(X_train, y_train, epochs=5, batch_size=32, verbose=2)
+        loss, accuracy = model.evaluate(X_test, y_test, verbose=0)
         hist = r.history
         print("Fit history:", hist)
-        return model.get_weights(), len(X_train), {}
+        return model.get_weights(), len(X_train), {"accuracy": accuracy, "loss": loss}
 
     def evaluate(self, parameters, config):
         model.set_weights(parameters)
-        loss, accuracy = model.evaluate(X_test, y_test, verbose=0)
-        print("Eval accuracy:", accuracy)
+        loss, accuracy = model.evaluate(X_test, y_test, verbose=2)
+        y_pred = model.predict(X_test, verbose=2)
 
-        # Optional: Calculate additional metrics if needed
-        y_pred = np.argmax(model.predict(X_test), axis=1)
-        recall = recall_score(y_test, y_pred, average='macro')
-        f1 = f1_score(y_test, y_pred, average='macro')
-
-        # Log results
+        y_pred_labels = np.argmax(y_pred, axis=1)
+        f1 = f1_score(y_test, y_pred_labels, average='weighted')
+        recall = recall_score(y_test, y_pred_labels, average='weighted')
+        conf_matrix = confusion_matrix(y_test, y_pred_labels)
+            
         results = {
             "client": CLIENT_ID,
             "accuracy": float(accuracy),
@@ -98,10 +99,9 @@ class Client(fl.client.NumPyClient):
             "loss": loss
         }
         print(results)
-        return loss, len(X_test), {"accuracy": accuracy}
+        return loss, len(X_test), {"accuracy": accuracy, "recall": recall}
 
-from flwr.client import start_client
-# Start Flower client
+# Start Flower clisent
 if __name__ == "__main__":
     server_address='intermediate_server'+str(sys.argv[1])+':'+str(sys.argv[2])
     start_client(server_address=server_address, client=Client().to_client())

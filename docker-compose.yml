@@ -1,4 +1,3 @@
-version: '3'
 services:
   global_server:
     build:
@@ -110,7 +109,7 @@ services:
       dockerfile: Dockerfile-SmartMeters2
     container_name: client3
     environment:
-      - CLIENT_ID=1  # Changed to avoid conflict
+      - CLIENT_ID=3  # Changed to avoid conflict
       - BASE_STATION_PATH=/data/Base_station_2  # Path inside the container
       - FL_SERVER_ADDRESS=intermediate_server2:5004  # Use intermediate_server2 for communication
     networks:
@@ -126,7 +125,7 @@ services:
       dockerfile: Dockerfile-SmartMeters2
     container_name: client4
     environment:
-      - CLIENT_ID=2 # Changed to avoid conflict
+      - CLIENT_ID=4 # Changed to avoid conflict
       - BASE_STATION_PATH=/data/Base_station_2  # Changed to avoid conflict
       - FL_SERVER_ADDRESS=intermediate_server2:5004  # Use intermediate_server2 for communication
     networks:
