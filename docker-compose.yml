@@ -15,11 +15,9 @@ services:
       - /workspace/HFL-docker/Hierarchical_FL/gServer:/data/gServer
     networks:
       - federated
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5004"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
+    depends_on:
+      - intermediate_server1
+      - intermediate_server2
 
   intermediate_server1:
     build:
@@ -40,11 +38,7 @@ services:
       - /workspace/HFL-docker/Hierarchical_FL/gServer:/data/gServer
     networks:
       - federated
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5003"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
+
 
   intermediate_server2:
     build:
@@ -65,11 +59,7 @@ services:
       - /workspace/HFL-docker/Hierarchical_FL/gServer:/data/gServer
     networks:
       - federated
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5004"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
+   
 
   client1:
     build:
