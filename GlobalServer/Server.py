@@ -12,16 +12,7 @@ from tensorflow.keras.layers import (
     Bidirectional, Conv1D, MaxPooling1D,
     LSTM
 )
-
-# Function to wait for the completion signal
-def wait_for_completion():
-    while not os.path.exists('/data/gServer/completion.flag'):
-        print("Waiting for intermediate servers to complete...")
-        time.sleep(5)  # Wait before checking again
-
-# Call the wait function before starting the server logic
-wait_for_completion()
-
+import time
 
 # Model creation function
 def create_cnn_model(X_train_shape=70, n_classes=2):
@@ -112,16 +103,6 @@ def aggregate(results: List[Tuple[NDArrays, int]]) -> NDArrays:
     ]
     return weights_prime
 
-# Load the round number
-# Load the round number or set to 0 if the file doesn't exist
-rnd_path = os.path.join(s_weights_path, "rnd.obj")
-
-if os.path.exists(rnd_path):
-    with open(rnd_path, 'rb') as h:
-        rnd = pickle.load(h)
-else:
-    rnd = 0  # Default value if the file doesn't exist
-
 # Load all weights from files
 def load_all_weights(server_path: str, rnd: int) -> List[Tuple[NDArrays, int]]:
     """Load all weights from the specified directory."""
@@ -139,7 +120,6 @@ def load_all_weights(server_path: str, rnd: int) -> List[Tuple[NDArrays, int]]:
 
     return weights_list
 
-weights_results = load_all_weights(server_path, rnd)
 
 # Aggregation function for weights
 def Aggregation(weights_results: List[Tuple[NDArrays, int]]):
@@ -148,16 +128,4 @@ def Aggregation(weights_results: List[Tuple[NDArrays, int]]):
     parameters_aggregated = ndarrays_to_parameters(aggregated_ndarrays)
     return parameters_aggregated
 
-# Perform the aggregation
-aggregated_weights = Aggregation(weights_results)
-res = [aggregated_weights, {}]
 
-# Ensure the directory exists before saving
-if not os.path.exists(s_weights_path):
-    os.makedirs(s_weights_path)
-
-# Save the aggregated weights
-with open(os.path.join(s_weights_path, f"Global_weights_{rnd}.obj"), 'wb') as h:
-    pickle.dump(res, h)
-
-print(f"Aggregated weights saved to {os.path.join(s_weights_path, f'Global_weights_{rnd}.obj')}")
