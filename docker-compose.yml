@@ -36,6 +36,7 @@ services:
       - /workspace/HFL-docker/Hierarchical_FL/Base_station_1:/data/Base_station_1  # Mount host directory to container
       - /workspace/HFL-docker/Hierarchical_FL/Server:/data/server
       - /workspace/HFL-docker/Hierarchical_FL/gServer:/data/gServer
+      - /workspace/HFL-docker/GlobalServer/:/data/Gscripts_server
     networks:
       - federated
 
@@ -57,6 +58,7 @@ services:
       - /workspace/HFL-docker/Hierarchical_FL/Base_station_2:/data/Base_station_2  # Mount host directory to container
       - /workspace/HFL-docker/Hierarchical_FL/Server:/data/server
       - /workspace/HFL-docker/Hierarchical_FL/gServer:/data/gServer
+      - /workspace/HFL-docker/GlobalServer/:/data/Gscripts_server
     networks:
       - federated
    

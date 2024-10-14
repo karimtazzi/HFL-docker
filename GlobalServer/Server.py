@@ -128,4 +128,6 @@ def Aggregation(weights_results: List[Tuple[NDArrays, int]]):
     parameters_aggregated = ndarrays_to_parameters(aggregated_ndarrays)
     return parameters_aggregated
 
+############################ Globale Evaluation ############################################################
+
 
