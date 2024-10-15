@@ -127,6 +127,38 @@ services:
     depends_on:
       - intermediate_server2
 
+  Malclient1:
+    build:
+      context: ./SmartMeters
+      dockerfile: Dockerfile-SmartMeters_Mal1
+    container_name: Malclient1
+    environment:
+      - CLIENT_ID=1 # Changed to avoid conflict
+      - BASE_STATION_PATH=/data/Base_station_1  # Changed to avoid conflict
+      - FL_SERVER_ADDRESS=intermediate_server1:5004  # Use intermediate_server2 for communication
+    networks:
+      - federated
+    volumes:
+      - /workspace/HFL-docker/Hierarchical_FL/Base_station_1:/data/Base_station_1 # Changed to avoid conflict
+    depends_on:
+      - intermediate_server1
+
+  Malclient2:
+    build:
+      context: ./SmartMeters
+      dockerfile: Dockerfile-SmartMeters_Mal2
+    container_name: Malclient2
+    environment:
+      - CLIENT_ID=3 # Changed to avoid conflict
+      - BASE_STATION_PATH=/data/Base_station_2  # Changed to avoid conflict
+      - FL_SERVER_ADDRESS=intermediate_server2:5004  # Use intermediate_server2 for communication
+    networks:
+      - federated
+    volumes:
+      - /workspace/HFL-docker/Hierarchical_FL/Base_station_2:/data/Base_station_2  # Changed to avoid conflict
+    depends_on:
+      - intermediate_server2
+
 networks:
   federated:
     driver: bridge
