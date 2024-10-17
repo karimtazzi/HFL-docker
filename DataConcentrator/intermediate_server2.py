@@ -5,6 +5,13 @@ import numpy as np
 from flwr.common import parameters_to_ndarrays, ndarrays_to_parameters, NDArrays, Scalar
 from typing import Dict, List, Tuple
 from functools import reduce
+import tensorflow as tf
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import (
+    Dense, Input, Dropout,
+    Bidirectional, Conv1D, MaxPooling1D,
+    LSTM
+)
 import time
 
 # Retrieve environment variables
@@ -18,6 +25,7 @@ def create_cnn_model(X_train_shape=70, n_classes=2):
     pool_size = 2
 
     cnn_model = Sequential([
+
         Input((X_train_shape, 1)),
 
         Conv1D(filters1, kernel_size, padding='same', activation='relu', strides=1),
@@ -44,7 +52,6 @@ def create_cnn_model(X_train_shape=70, n_classes=2):
 
     return cnn_model
 
-import os
 import pandas as pd
 
 model = create_cnn_model()
@@ -58,6 +65,8 @@ def detect_malicious_clients(model, ll, data):
     new_ll = []  # Initialize the new list to store valid weights
     X_ev = data.drop(['Label'], axis=1).values  # Features
     y_ev = data['Label'].values  # Labels
+
+    X_ev = X_ev.reshape(X_ev.shape[0], X_ev.shape[1], 1)  # Reshape for CNN input
 
     # Iterate over the list of weights
     for w in ll:
@@ -125,7 +134,11 @@ class SaveModelStrategy(fl.server.strategy.FedAvg):
             (parameters_to_ndarrays(fit_res.parameters), fit_res.num_examples)
             for _, fit_res in results
         ]
-        weights_results= etect_malicious_clients(Model, old_weights_results, data)
+        
+        # Detect and remove malicious clients
+        weights_results = detect_malicious_clients(model, old_weights_results, DATA)
+        
+        # Aggregate weights
         aggregated_ndarrays = aggregate_weights(weights_results)
         parameters_aggregated = ndarrays_to_parameters(aggregated_ndarrays)
 
@@ -158,7 +171,6 @@ class SaveModelStrategy(fl.server.strategy.FedAvg):
 
 # Create strategy and run the Flower server
 strategy = SaveModelStrategy()
-
 
 # Start Flower server for three rounds of federated learning
 fl.server.start_server(

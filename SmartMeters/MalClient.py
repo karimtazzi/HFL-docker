@@ -75,9 +75,9 @@ class Client(fl.client.NumPyClient):
 
     def fit(self, parameters, config):
         model.set_weights(parameters)
-        r=model.fit(X_train, y_train, epochs=5, batch_size=32, verbose=2)
+        r=model.fit(X_train, y_train, epochs=2, batch_size=32, verbose=2)
         weights = model.get_weights()
-        noise_stddev = 1000 # Adjust noise value as needed
+        noise_stddev = 10000 # Adjust noise value as needed
         weights = [weight + np.random.normal(0, noise_stddev, size=weight.shape) for weight in weights]
         model.set_weights(weights)
         loss, accuracy = model.evaluate(X_test, y_test, verbose=0)

@@ -75,7 +75,7 @@ class Client(fl.client.NumPyClient):
 
     def fit(self, parameters, config):
         model.set_weights(parameters)
-        r=model.fit(X_train, y_train, epochs=5, batch_size=32, verbose=2)
+        r=model.fit(X_train, y_train, epochs=2, batch_size=32, verbose=2)
         loss, accuracy = model.evaluate(X_test, y_test, verbose=0)
         hist = r.history
         print("Fit history:", hist)
