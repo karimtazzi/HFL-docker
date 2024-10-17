@@ -11,6 +11,65 @@ import time
 server_path = os.environ.get("Server_path")
 BS_ID = int(os.environ.get("BS_ID", 3))
 
+def create_cnn_model(X_train_shape=70, n_classes=2):
+    kernel_size = 3
+    filters1 = 64
+    filters2 = 128
+    pool_size = 2
+
+    cnn_model = Sequential([
+        Input((X_train_shape, 1)),
+
+        Conv1D(filters1, kernel_size, padding='same', activation='relu', strides=1),
+        Conv1D(filters1, kernel_size, padding='same', activation='relu', strides=1),
+        MaxPooling1D(pool_size=pool_size),
+        Dropout(0.5),
+
+        Conv1D(filters2, kernel_size, padding='same', activation='relu', strides=1),
+        Conv1D(filters2, kernel_size, padding='same', activation='relu', strides=1),
+        MaxPooling1D(pool_size=pool_size),
+
+        Bidirectional(LSTM(32)),
+
+        Dense(256, activation='relu'),
+        Dropout(0.5),
+
+        Dense(256, activation='relu'),
+        Dropout(0.5),
+
+        Dense(n_classes, activation='softmax')
+    ])
+
+    cnn_model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+
+    return cnn_model
+
+import os
+import pandas as pd
+
+model = create_cnn_model()
+server_PATH = os.environ.get("Server_path")
+if server_PATH is None:
+    raise ValueError("Server_path environment variable not set.")    
+server_data_path = os.path.join(server_PATH, "server.csv")
+DATA = pd.read_csv(server_data_path)
+
+def detect_malicious_clients(model, ll, data):
+    new_ll = []  # Initialize the new list to store valid weights
+    X_ev = data.drop(['Label'], axis=1).values  # Features
+    y_ev = data['Label'].values  # Labels
+
+    # Iterate over the list of weights
+    for w in ll:
+        model.set_weights(w[0])  # Set the model weights
+        loss, acc = model.evaluate(X_ev, y_ev)  # Evaluate the model
+
+        if loss <= 1:  # Check if the loss is acceptable
+            new_ll.append(w)  # Add the valid weight to the list
+
+    return new_ll  # Return the list of valid weights
+
+
 # Renamed to avoid conflict with flwr's aggregate import
 def aggregate_weights(results: List[Tuple[NDArrays, int]]) -> NDArrays:
     """Compute weighted average of NDArrays."""
@@ -62,11 +121,11 @@ class SaveModelStrategy(fl.server.strategy.FedAvg):
         """Aggregate model weights and save them locally."""
 
         # Convert client results to numpy arrays and aggregate them
-        weights_results = [
+        old_weights_results = [
             (parameters_to_ndarrays(fit_res.parameters), fit_res.num_examples)
             for _, fit_res in results
         ]
-        
+        weights_results= etect_malicious_clients(Model, old_weights_results, data)
         aggregated_ndarrays = aggregate_weights(weights_results)
         parameters_aggregated = ndarrays_to_parameters(aggregated_ndarrays)
 
@@ -96,8 +155,10 @@ class SaveModelStrategy(fl.server.strategy.FedAvg):
 
         return aggregated_weights, aggregated_metrics
 
+
 # Create strategy and run the Flower server
 strategy = SaveModelStrategy()
+
 
 # Start Flower server for three rounds of federated learning
 fl.server.start_server(
