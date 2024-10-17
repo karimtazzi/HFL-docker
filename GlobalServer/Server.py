@@ -58,30 +58,6 @@ if s_weights_path:
     with open(os.path.join(s_weights_path, "Global_weights_0.obj"), 'wb') as file:
         pickle.dump(initial_weights, file)
 
-# Function for aggregating fit metrics
-def fit_metrics_aggregation_fn(
-    fit_metrics: List[Tuple[int, Dict[str, Scalar]]]
-) -> Dict[str, Scalar]:
-    """Aggregate fit metrics using weighted averages based on client data."""
-
-    total_examples = 0
-    weighted_loss_sum = 0.0
-    weighted_accuracy_sum = 0.0
-
-    # Accumulate weighted sums
-    for num_examples, metrics in fit_metrics:
-        total_examples += num_examples
-        weighted_loss_sum += metrics["loss"] * num_examples
-        weighted_accuracy_sum += metrics["accuracy"] * num_examples
-
-    avg_loss = weighted_loss_sum / total_examples if total_examples > 0 else 0.0
-    avg_accuracy = weighted_accuracy_sum / total_examples if total_examples > 0 else 0.0
-
-    return {
-        "loss": avg_loss,
-        "accuracy": avg_accuracy,
-    }
-
 # Fetch paths from environment variables
 server_path = os.environ.get("Server_path")
 s_weights_path = os.environ.get("Gserver_path")

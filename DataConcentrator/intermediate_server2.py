@@ -136,9 +136,11 @@ class SaveModelStrategy(fl.server.strategy.FedAvg):
         ]
         
         # Detect and remove malicious clients
+        print("############################ Start Malicious clients detection for Base station 2 ####################")
         weights_results = detect_malicious_clients(model, old_weights_results, DATA)
         
         # Aggregate weights
+        print("############################ Start aggregation process for Base station 2 ############################")
         aggregated_ndarrays = aggregate_weights(weights_results)
         parameters_aggregated = ndarrays_to_parameters(aggregated_ndarrays)
 
@@ -153,6 +155,7 @@ class SaveModelStrategy(fl.server.strategy.FedAvg):
         # Save weights for the current round
         with open(os.path.join(s_weights_path, f"BS_{BS_ID}_weights_round_{rnd}.obj"), 'wb') as h:
             pickle.dump(weights_metrics, h)
+        print("############################ parameters of first aggregation of BS2 are stored in {s_weights_path} ###############")
 
         # Simulate waiting
         time.sleep(25)
@@ -175,6 +178,6 @@ strategy = SaveModelStrategy()
 # Start Flower server for three rounds of federated learning
 fl.server.start_server(
     server_address='intermediate_server2:5004',
-    config=fl.server.ServerConfig(num_rounds=3),
+    config=fl.server.ServerConfig(num_rounds=5),
     strategy=strategy
 )
